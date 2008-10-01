@@ -35,8 +35,11 @@ function postblock_block($op = 'list', $delta = 0, $edit = array()) {
       'weight' => -1,
       'status' => 1,
       'region' => 'right',
-      'cache' => BLOCK_NO_CACHE,
+      'cache' => BLOCK_CACHE_PER_ROLE,
     );
+    if (variable_get('postblock_destination', 'node') == 'destination') {
+      $blocks['post']['cache'] = BLOCK_NO_CACHE;
+    }
     return $blocks;
   }
   else if ($op == 'configure' && $delta == 'post') {
