@@ -1,0 +1,4 @@
+; $Id$
+name = Post block
+description = Provides a sidebar block with easily themable links to post new content.
+core = 6.x
