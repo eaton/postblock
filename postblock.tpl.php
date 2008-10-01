@@ -10,8 +10,6 @@
  *   should be linked.
  * - $items: An array of formatted data for each content type that should be
  *   linked. Each one contains:
- *   - $item->type_info: A keyed array containing the full data returned by
- *     node_get_types() for this content type.
  *   - $item->type: The machine-readable name of the content type.
  *   - $item->type_class: A CSS-safe version of $type, suitable for use in
  *     classes or IDs.

@@ -1,6 +1,18 @@
 <?php
 // $Id$
 
+/**
+ * @file postblock.module
+ *
+ * Exposes a simple sidebar block containing links to node creation pages that
+ * the current user has access to. Designed for easy theming and convenience.
+ */
+
+/**
+ * Implementation of hook_theme().
+ *
+ * Maps the postblock themable item to its template file.
+ */
 function postblock_theme() {
   return array(
     'postblock' => array(
@@ -10,6 +22,12 @@ function postblock_theme() {
   );
 }
 
+/**
+ * Implementation of hook_block().
+ *
+ * Exposes metadata and configuration forms for the Postblock block, generates
+ * the content of the block during the 'view' $op.
+ */
 function postblock_block($op = 'list', $delta = 0, $edit = array()) {
   if ($op == 'list') {
     $blocks['post'] = array(
@@ -17,7 +35,7 @@ function postblock_block($op = 'list', $delta = 0, $edit = array()) {
       'weight' => -1,
       'status' => 1,
       'region' => 'right',
-      'cache' => BLOCK_CACHE_PER_ROLE,
+      'cache' => BLOCK_NO_CACHE,
     );
     return $blocks;
   }
@@ -46,29 +64,28 @@ function postblock_block($op = 'list', $delta = 0, $edit = array()) {
     variable_set('postblock_destination', $edit['postblock_destination']);
   }
   else if ($op == 'view' && $delta == 'post') {
-    $block = array(
-      'subject' => t('Post content'),
-      'content' => postblock_generate_block(),
-    );
-    return $block;
-  }
-}
-
-function postblock_generate_block() {
-  $hidden_types = variable_get('postblock_hidden_types', array());
-  $all_types = node_get_types('types');
-  $list = array();
-  
-  foreach($all_types as $key => $value) {
-    if (empty($hidden_types[$key]) && node_access('create', $key)) {
-      $list[] = $value;
+    $hidden_types = variable_get('postblock_hidden_types', array());
+    $all_types = node_get_types('types');
+    $list = array();
+    
+    foreach($all_types as $key => $value) {
+      if (empty($hidden_types[$key]) && node_access('create', $key)) {
+        $list[] = $value;
+      }
+    }
+    if (!empty($list)) {
+      $block = array(
+        'subject' => t('Post content'),
+        'content' => theme('postblock', $list),
+      );
+      return $block;
     }
   }
-  if (!empty($list)) {
-    return theme('postblock', $list);
-  }
 }
 
+/**
+ * Preprocess function for postblock.tpl.php.
+ */
 function postblock_preprocess_postblock(&$vars) {
   $vars['items'] = array();
 
@@ -95,7 +112,7 @@ function postblock_preprocess_postblock(&$vars) {
     }
   
     $item->url = url('node/add/' . $item->type, $options);
-    $item->link = l(t('Post a !typename', array('!typename' => $item->name)), 'node/add/' . $item->type, $options);
+    $item->link = l(t('Create a !typename', array('!typename' => $item->name)), 'node/add/' . $item->type, $options);
     $vars['items'][] = $item;
   }
 }
