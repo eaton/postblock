@@ -1,4 +1,5 @@
 ; $Id$
 name = Post block
-description = Provides a sidebar block with easily themable links to post new content.
+description = Provides a block with themable links to create nodes of specific content types
 core = 6.x
+
