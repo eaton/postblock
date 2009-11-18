@@ -1,18 +1,20 @@
 <?php
 // $Id$
 
+/**
+ * Implementation of hook_theme().
+ */
 function postblock_theme() {
   return array(
-    'postblock_item' => array(
-      'arguments' => array('type_info' => NULL),
-      'template' => 'postblock-item',
-    ),
     'postblock' => array(
       'arguments' => array('items' => array()),
     ),
   );
 }
 
+/**
+ * Implementation of hook_block().
+ */
 function postblock_block($op = 'list', $delta = 0, $edit = array()) {
   if ($op == 'list') {
     $blocks['post'] = array(
@@ -24,7 +26,7 @@ function postblock_block($op = 'list', $delta = 0, $edit = array()) {
     );
     return $blocks;
   }
-  else if ($op == 'configure' && $delta == 'post') {
+  elseif ($op == 'configure' && $delta == 'post') {
     $form['postblock_hidden_types'] = array(
       '#type' => 'checkboxes',
       '#title' => t('Hide the following content types'),
@@ -33,10 +35,10 @@ function postblock_block($op = 'list', $delta = 0, $edit = array()) {
     );
     return $form;
   }
-  else if ($op == 'save' && $delta == 0) {
+  elseif ($op == 'save' && $delta == 0) {
     variable_set('postblock_hidden_types', $edit['postblock_hidden_types']);
   }
-  else if ($op == 'view' && $delta == 'post') {
+  elseif ($op == 'view' && $delta == 'post') {
     $block = array(
       'subject' => t('Post content'),
       'content' => postblock_generate_block(),
@@ -45,12 +47,15 @@ function postblock_block($op = 'list', $delta = 0, $edit = array()) {
   }
 }
 
+/**
+ * Generate the contents of the block.
+ */
 function postblock_generate_block() {
   $hidden_types = variable_get('postblock_hidden_types', array());
   $all_types = node_get_types('types');
   $list = array();
-  
-  foreach($all_types as $key => $value) {
+
+  foreach ($all_types as $key => $value) {
     if (empty($hidden_types[$key]) && node_access('create', $key)) {
       $list[] = $value;
     }
@@ -60,22 +65,16 @@ function postblock_generate_block() {
   }
 }
 
+/**
+ * Render the links as an un-ordered list.
+ */
 function theme_postblock($items = array()) {
+  $links = array();
+
   foreach ($items as $item) {
-    $links[] = l(t('Create a !type', array('!type' => $item->name)), 'node/add/' . $item->type);
+    $item_url = str_replace('_', '-', $item->type);
+    $links[] = l(t('Create !type', array('!type' => $item->name)), 'node/add/' . $item_url);
   }
+
   return theme('item_list', $links, NULL, 'ul', array('id' => 'postblock-items'));
 }
-
-function postblock_preprocess_postblock_item(&$vars) {
-  drupal_add_css(drupal_get_path('module', 'postblock') . '/postblock.css');
-  
-  $type_info = $vars['type_info'];
-  $vars['type'] = $type_info->type;
-  $vars['name'] = $type_info->name;
-  $vars['description'] = empty($type_info->description) ? NULL : check_markup($type_info->description);
-  $vars['help'] = empty($type_info->help) ? NULL : check_markup($type_info->help);
-  $vars['url'] = url('node/add/' . $type_info->type);
-  $vars['type_class'] = str_replace('_', '-', $type_info->type);
-}
-
