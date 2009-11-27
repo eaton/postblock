@@ -2,67 +2,158 @@
 // $Id$
 
 /**
- * Implementation of hook_theme().
+ * Implementation of hook_perm().
  */
-function postblock_theme() {
-  return array(
-    'postblock' => array(
-      'arguments' => array('items' => array()),
-    ),
+function postblock_perm() {
+  return array('administer postblock');
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function postblock_menu() {
+  $items['admin/settings/postblock'] = array(
+    'title' => 'Post block',
+    'description' => 'Configure Post Block',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('postblock_admin_settings'),
+    'access arguments' => array('administer postblock'),
+    'type' => MENU_NORMAL_ITEM,
   );
+
+  return $items;
+}
+
+/**
+ * Admin settings form
+ */
+function postblock_admin_settings() {
+  $form['postblock_number'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Number of blocks'),
+    '#description' => t('The number of Post Blocks you want. Must be between 1 and 99.'),
+    '#default_value' => variable_get('postblock_number', 1),
+    '#size' => 2,
+    '#maxlength' => 2,
+  );
+
+  // Validate input
+  $form['#validate'][] = 'postblock_settings_validate';
+
+  // Build the form
+  return system_settings_form($form);
+}
+
+/**
+ * Validation for admin settings form
+ */
+function postblock_settings_validate($form, &$form_state) {
+  $number = $form_state['values']['postblock_number'];
+
+  // Make sure number is made up of only numeric characters
+  if (!ctype_digit($number)) {
+    form_set_error('postblock_number', t("'Number of blocks' must be a number."));
+  }
+
+  // Make sure number is between 1 & 99
+  if ($number < 1 || $number > 99) {
+    form_set_error('postblock_number', t("'Number of blocks' must be between 1 & 99 (inclusive)."));
+  }
 }
 
 /**
  * Implementation of hook_block().
  */
 function postblock_block($op = 'list', $delta = 0, $edit = array()) {
-  if ($op == 'list') {
-    $blocks['post'] = array(
-      'info' => t('Post content'),
-      'weight' => -1,
-      'status' => 1,
-      'region' => 'right',
-      'cache' => BLOCK_CACHE_PER_ROLE,
-    );
-    return $blocks;
-  }
-  elseif ($op == 'configure' && $delta == 'post') {
-    $form['postblock_hidden_types'] = array(
-      '#type' => 'checkboxes',
-      '#title' => t('Hide the following content types'),
-      '#default_value' => variable_get('postblock_hidden_types', array()),
-      '#options' => node_get_types('names'),
-    );
-    return $form;
-  }
-  elseif ($op == 'save' && $delta == 0) {
-    variable_set('postblock_hidden_types', $edit['postblock_hidden_types']);
-  }
-  elseif ($op == 'view' && $delta == 'post') {
-    $block = array(
-      'subject' => t('Post content'),
-      'content' => postblock_generate_block(),
-    );
-    return $block;
+  switch ($op) {
+    case 'list':
+      // Create as many blocks as entered in the settings form
+      for ($i = 1; $i <= variable_get('postblock_number', 1); $i++) {
+        $blocks[$i] = array(
+          'info' => variable_get('postblock_name_' . $i, 'Post Block ' . $i) . ' (Post Block)',
+          'cache' => BLOCK_CACHE_PER_ROLE,
+        );
+      }
+      return $blocks;
+    break;
+
+    case 'configure':
+      $form['postblock_name_' . $delta] = array(
+        '#type' => 'textfield',
+        '#title' => t('Block name'),
+        '#description' => t('A custom name for the block to help distinguish from other Post Block blocks.') . '<br />' . t('NOTE: This name is only used on the Blocks administration page (admin/build/block) and is never shown in the block itself.'),
+        '#default_value' => variable_get('postblock_name_' . $delta, 'Post Block ' . $delta),
+      );
+      $form['postblock_content_types_' . $delta] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Content types'),
+        '#collapsible' => TRUE,
+        '#collapsed' => FALSE,
+      );
+      $form['postblock_content_types_' . $delta]['postblock_selection_' . $delta] = array(
+        '#type' => 'radios',
+        '#title' => t('Selection method'),
+        '#description' => t('Show: Display only the selected content types. New content types will need to be enabled manually.') . '<br />' . t('Hide: Display all except the selected content types. New content types will be enabled automatically.'),
+        '#default_value' => variable_get('postblock_selection_' . $delta, 0),
+        '#options' => array(t('Show'), t('Hide')),
+      );
+      $form['postblock_content_types_' . $delta]['postblock_types_' . $delta] = array(
+        '#type' => 'checkboxes',
+        '#description' => t('Content types selected here will be shown or hidden depending on the \'Selection method\' above.') . '<br />' . t('NOTE: Content type links displayed in the Post Block will only be visible to users with the \'create [content type]\' permission.'),
+        '#default_value' => variable_get('postblock_types_' . $delta, array()),
+        '#options' => node_get_types('names'),
+      );
+      return $form;
+    break;
+
+    case 'save':
+      variable_set('postblock_name_' . $delta, $edit['postblock_name_' . $delta]);
+      variable_set('postblock_selection_' . $delta, $edit['postblock_selection_' . $delta]);
+      variable_set('postblock_types_' . $delta, $edit['postblock_types_' . $delta]);
+    break;
+
+    case 'view':
+      $block = array(
+        'subject' => t('Post Content'),
+        'content' => postblock_generate_block($delta),
+      );
+      return $block;
+    break;
   }
 }
 
 /**
- * Generate the contents of the block.
+ * Generate the contents of the block
  */
-function postblock_generate_block() {
-  $hidden_types = variable_get('postblock_hidden_types', array());
+function postblock_generate_block($delta) {
   $all_types = node_get_types('types');
+  $method = variable_get('postblock_selection_' . $delta, 0);
+  $types = variable_get('postblock_types_' . $delta, array());
   $list = array();
 
+  // Get the list of content types the current user has permission to create
   foreach ($all_types as $key => $value) {
-    if (empty($hidden_types[$key]) && node_access('create', $key)) {
+    if (($method ? empty($types[$key]) : !empty($types[$key])) && node_access('create', $key)) {
       $list[] = $value;
     }
   }
+
+  // Theme list
   if (!empty($list)) {
     return theme('postblock', $list);
   }
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function postblock_theme() {
+  // TODO: Change to .tpl.php theming
+  return array(
+    'postblock' => array(
+      'arguments' => array('items' => array()),
+    ),
+  );
 }
 
 /**

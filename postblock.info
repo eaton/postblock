@@ -1,5 +1,4 @@
 ; $Id$
-name = Post block
+name = Post Block
 description = Provides a block with themable links to create nodes of specific content types
 core = 6.x
-
