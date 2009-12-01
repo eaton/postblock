@@ -2,6 +2,12 @@
 // $Id$
 
 /**
+ * @file
+ * Allows users to create blocks that display links to the various content types
+ * on their site.
+ */
+
+/**
  * Implementation of hook_perm().
  */
 function postblock_perm() {
@@ -99,7 +105,7 @@ function postblock_block($op = 'list', $delta = 0, $edit = array()) {
       );
       $form['postblock_content_types_' . $delta]['postblock_types_' . $delta] = array(
         '#type' => 'checkboxes',
-        '#description' => t('Content types selected here will be shown or hidden depending on the \'Selection method\' above.') . '<br />' . t('NOTE: Content type links displayed in the Post Block will only be visible to users with the \'create [content type]\' permission.'),
+        '#description' => t("Content types selected here will be shown or hidden depending on the 'Selection method' above.") . '<br />' . t("NOTE: Content type links displayed in the Post Block will only be visible to users with the 'create [content type]' permission."),
         '#default_value' => variable_get('postblock_types_' . $delta, array()),
         '#options' => node_get_types('names'),
       );
@@ -140,7 +146,7 @@ function postblock_generate_block($delta) {
 
   // Theme list
   if (!empty($list)) {
-    return theme('postblock', $list);
+    return theme('postblock', $list, $delta);
   }
 }
 
@@ -148,24 +154,49 @@ function postblock_generate_block($delta) {
  * Implementation of hook_theme().
  */
 function postblock_theme() {
-  // TODO: Change to .tpl.php theming
   return array(
     'postblock' => array(
-      'arguments' => array('items' => array()),
+      'arguments' => array('types' => array(), 'postblock_id' => 1),
+      'template' => 'postblock',
     ),
   );
 }
 
 /**
- * Render the links as an un-ordered list.
+ * Preprocess function for postblock.tpl.php
  */
-function theme_postblock($items = array()) {
-  $links = array();
+function template_preprocess_postblock(&$variables) {
+  // Get ID of last item
+  $last = count($variables['types']) - 1;
 
-  foreach ($items as $item) {
-    $item_url = str_replace('_', '-', $item->type);
-    $links[] = l(t('Create !type', array('!type' => $item->name)), 'node/add/' . $item_url);
+  // Setup variables
+  foreach ($variables['types'] as $key => $type) {
+    $items[$key]->type = $type->type;
+    $items[$key]->name = check_plain($type->name);
+
+    // Remove HTML tags if any exist
+    $description = strpos($type->description, '<') !== FALSE ? strip_tags($type->description) : $type->description;
+    $items[$key]->description = check_plain($description);
+
+    // Replace underscores with hyphens so links work properly
+    $safe_type = str_replace('_', '-', $items[$key]->type);
+    $items[$key]->url = url('node/add/' . $safe_type);
+
+    // Set 'odd' or 'even' status
+    $items[$key]->zebra = ($key % 2) ? 1 : 0;
+
+    // Set 'first' & 'last' status
+    $items[$key]->first = ($key == 0) ? TRUE : FALSE;
+    $items[$key]->last = ($key == $last) ? TRUE : FALSE;
+
+    // Set active status
+    $trail = array_reverse(menu_get_active_trail());
+    $items[$key]->active = ('node/add/' . $safe_type == $trail[0]['href']) ? TRUE : FALSE;
   }
 
-  return theme('item_list', $links, NULL, 'ul', array('id' => 'postblock-items'));
+  // Assign variables
+  $variables['items'] = $items;
+
+  // Setup template suggestions
+  $variables['template_file'] = 'postblock-' . $variables['postblock_id'];
 }
