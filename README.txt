@@ -34,19 +34,24 @@ CONFIGURATION
 
    See: http://drupal.org/getting-started/install-contrib/modules
 
-2. SET NUMBER OF POST BLOCKS
+2. SET PERMISSIONS
+
+   Goto: User Management > Permissions (admin/user/permissions)
+   Enable the 'administer postblock' permission for your admin role.
+
+3. SET NUMBER OF POST BLOCKS
 
    Goto: Site Configuration > Post Block (admin/settings/postblock)
    Enter the number of Post Blocks you want to use (this is the number of blocks
    that will be created on the Blocks administration page (see next step)).
 
-3. ENABLE BLOCKS
+4. ENABLE BLOCKS
 
    Goto: Site Building > Blocks (admin/build/block)
    Enable the Post Blocks by moving them to the region(s) you want them
    displayed in.
 
-4. CONFIGURE BLOCKS
+5. CONFIGURE BLOCKS
 
    Block Title:
    The title that will be displayed at the top of the block. Leave it blank to
