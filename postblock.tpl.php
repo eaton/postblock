@@ -27,7 +27,9 @@
 <ul class="menu">
   <?php foreach ($items as $key => $item): ?>
     <li class="leaf<?php print $item->zebra ? ' odd' : ' even'; ?><?php print $item->first ? ' first' : ''; ?><?php print $item->last ? ' last' : ''; ?><?php print $item->active ? ' active' : ''; ?>">
-      <a href="<?php print $item->url; ?>" title="<?php print $item->description; ?>" class="<?php print $item->active ? 'active' : ''; ?>">Create <?php print $item->name; ?></a>
+      <a href="<?php print $item->url; ?>" title="<?php print $item->description; ?>" class="<?php print $item->active ? 'active' : ''; ?>">
+        <?php print t('Create !type', array('!type' => $item->name)); ?>
+      </a>
     </li>
   <?php endforeach; ?>
 </ul>
