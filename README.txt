@@ -16,7 +16,8 @@ list of links to the various content types on your site.
 
 The benefit of using Post Block over the default 'Create content' links (in the
 Navigation menu) is that the Post Block links are configurable - i.e. you can
-specify which content types are displayed (or hidden).
+specify which content types are displayed (or hidden) and set the order they're
+displayed in.
 
 With the additional ability to create as many Post Blocks as you want, you can
 easily create blocks for the different roles on your site so that certain role
@@ -75,8 +76,9 @@ CONFIGURATION
       you create after configuring this block will be displayed automatically.
 
    Content Types:
-   Select the content types to be shown or hidden (depending on the Selection
-   Method above) in your block.
+   Tick the checkboxes for the content types you want to be shown or hidden
+   (depending on the Selection Method above) for your block. Rearrange the
+   content types into the order you want them displayed in your block.
 
 
 THEMING

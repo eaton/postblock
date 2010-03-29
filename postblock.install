@@ -1,0 +1,19 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Post Block installation/uninstallation functions.
+ */
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function postblock_uninstall() {
+  // Unset Post Block variables
+  foreach (variable_init() as $variable => $value) {
+    if (strpos($variable, 'postblock_') === 0) {
+      variable_del($variable);
+    }
+  }
+}
