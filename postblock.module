@@ -9,8 +9,14 @@
 /**
  * Implementation of hook_perm().
  */
-function postblock_perm() {
-  return array('administer postblock');
+function postblock_permission() {
+  return array(
+    'administer postblock' => array(
+      'title' => t('Administer post block'),
+      'description' => t('Add and configure blocks with links to the Post Content page.'),
+      'restrict access' => FALSE,
+    ),
+  );
 }
 
 /**
@@ -19,11 +25,15 @@ function postblock_perm() {
 function postblock_theme() {
   return array(
     'postblock' => array(
-      'arguments' => array('types' => array(), 'postblock_id' => 1),
+      'variables' => array(
+        'types' => array(),
+        'postblock_id' => NULL,
+        'verb' => 'Create',
+      ),
       'template' => 'postblock',
     ),
     'postblock_types' => array(
-      'arguments' => array('form' => array()),
+      'variables' => array('form' => array()),
     ),
   );
 }
@@ -84,76 +94,98 @@ function postblock_settings_validate($form, &$form_state) {
 /**
  * Implementation of hook_block().
  */
-function postblock_block($op = 'list', $delta = 0, $edit = array()) {
+function postblock_block_info() {
   $node_types = node_get_types('names');
 
-  switch ($op) {
-    case 'list':
-      // Create as many blocks as entered in the settings form
-      for ($i = 1; $i <= variable_get('postblock_number', 1); $i++) {
-        $blocks[$i] = array(
-          'info' => variable_get('postblock_name_' . $i, 'Post Block ' . $i) . ' (Post Block)',
-          'cache' => BLOCK_CACHE_PER_ROLE,
-        );
-      }
-      return $blocks;
-    break;
-
-    case 'configure':
-      $form['postblock_name_' . $delta] = array(
-        '#type' => 'textfield',
-        '#title' => t('Block name'),
-        '#description' => t('A custom name for the block to help distinguish from other Post Block blocks.') . '<br />' . t('NOTE: This name is only used on the Blocks administration page (admin/build/block) and is never shown in the block itself.'),
-        '#default_value' => variable_get('postblock_name_' . $delta, 'Post Block ' . $delta),
-      );
-      $form['postblock_content_types'] = array(
-        '#type' => 'fieldset',
-        '#title' => t('Content types'),
-        '#collapsible' => TRUE,
-        '#collapsed' => FALSE,
-      );
-      $form['postblock_content_types']['postblock_selection_' . $delta] = array(
-        '#type' => 'radios',
-        '#title' => t('Selection method'),
-        '#description' => t('Show: Display only the selected content types. New content types will need to be enabled manually.') . '<br />' . t('Hide: Display all except the selected content types. New content types will be enabled automatically.'),
-        '#default_value' => variable_get('postblock_selection_' . $delta, 0),
-        '#options' => array(t('Show'), t('Hide')),
-      );
-      $form['postblock_content_types']['postblock_types_' . $delta] = array(
-        '#tree' => TRUE,
-        '#theme' => 'postblock_types',
-      );
-      $default = variable_get('postblock_types_' . $delta, array());
-      foreach ($node_types as $id => $node_type) {
-        $form['postblock_content_types']['postblock_types_' . $delta][$id]['data'] = array(
-          '#type' => 'checkbox',
-          '#title' => $node_type,
-          '#default_value' => $default[$id]['data'],
-        );
-        $form['postblock_content_types']['postblock_types_' . $delta][$id]['weight'] = array(
-          '#type' => 'weight',
-          '#default_value' => $default[$id]['weight'],
-          '#attributes' => array('class' => 'weight'),
-        );
-      }
-      return $form;
-    break;
-
-    case 'save':
-      variable_set('postblock_name_' . $delta, $edit['postblock_name_' . $delta]);
-      variable_set('postblock_selection_' . $delta, $edit['postblock_selection_' . $delta]);
-      variable_set('postblock_types_' . $delta, $edit['postblock_types_' . $delta]);
-    break;
-
-    case 'view':
-      $block = array(
-        'subject' => t('Post Content'),
-        'content' => postblock_generate_block($delta),
-      );
-      return $block;
-    break;
+  // Create as many blocks as entered in the settings form
+  for ($i = 1; $i <= variable_get('postblock_number', 1); $i++) {
+	$blocks[$i] = array(
+	  'info' => variable_get('postblock_name_' . $i, 'Post Block ' . $i) . ' (Post Block)',
+	  'cache' => BLOCK_CACHE_PER_ROLE,
+	);
   }
+  return $blocks;
 }
+
+
+/**
+ * Implementation of hook_block_configure().
+ */
+function postblock_block_configure($delta = 0) {
+  $node_types = node_get_types('names');
+
+  $form['postblock_name_' . $delta] = array(
+	'#type' => 'textfield',
+	'#title' => t('Block name'),
+	'#description' => t('A custom name for the block to help distinguish from other Post Block blocks.') . '<br />' . t('NOTE: This name is only used on the Blocks administration page (admin/build/block) and is never shown in the block itself.'),
+	'#default_value' => variable_get('postblock_name_' . $delta, 'Post Block ' . $delta),
+  );
+
+  $form['postblock_verb_' . $delta] = array(
+	'#type' => 'textfield',
+	'#title' => t('Block verb'),
+	'#description' => t('A custom name for the block to help distinguish from other Post Block blocks.') . '<br />' . t('NOTE: This name is only used on the Blocks administration page (admin/build/block) and is never shown in the block itself.'),
+	'#default_value' => variable_get('postblock_verb_' . $delta, 'Create'),
+  );
+
+  $form['postblock_content_types'] = array(
+	'#type' => 'fieldset',
+	'#title' => t('Content types'),
+	'#collapsible' => TRUE,
+	'#collapsed' => FALSE,
+  );
+  $form['postblock_content_types']['postblock_selection_' . $delta] = array(
+	'#type' => 'radios',
+	'#title' => t('Selection method'),
+	'#description' => t('Show: Display only the selected content types. New content types will need to be enabled manually.') . '<br />' . t('Hide: Display all except the selected content types. New content types will be enabled automatically.'),
+	'#default_value' => variable_get('postblock_selection_' . $delta, 0),
+	'#options' => array(t('Show'), t('Hide')),
+  );
+  $form['postblock_content_types']['postblock_types_' . $delta] = array(
+	'#tree' => TRUE,
+	'#theme' => 'postblock_types',
+  );
+  $default = variable_get('postblock_types_' . $delta, array());
+  foreach ($node_types as $id => $node_type) {
+	$form['postblock_content_types']['postblock_types_' . $delta][$id]['data'] = array(
+	  '#type' => 'checkbox',
+	  '#title' => $node_type,
+	  '#default_value' => $default[$id]['data'],
+	);
+	$form['postblock_content_types']['postblock_types_' . $delta][$id]['weight'] = array(
+	  '#type' => 'weight',
+	  '#default_value' => $default[$id]['weight'],
+	  '#attributes' => array('class' => 'weight'),
+	);
+  }
+  return $form;
+}
+
+/**
+ * Implementation of hook_block_save().
+ */
+function postblock_block_save($op = 'list', $delta = 0, $edit = array()) {
+  variable_set('postblock_name_' . $delta, $edit['postblock_name_' . $delta]);
+  variable_set('postblock_verb_' . $delta, $edit['postblock_verb_' . $delta]);
+  variable_set('postblock_selection_' . $delta, $edit['postblock_selection_' . $delta]);
+  variable_set('postblock_types_' . $delta, $edit['postblock_types_' . $delta]);
+}
+
+
+/**
+ * Implementation of hook_block_view().
+ */
+function postblock_block_view($delta = 0) {
+  $types = variable_get('postblock_types_' . $delta, array());
+  $method = variable_get('postblock_selection_' . $delta, 0);
+  $verb = variable_get('postblock_verb_' . $delta, 'Create');
+  $block = array(
+	'subject' => t('Post Content'),
+	'content' => _postblock_generate($types, $verb),
+  );
+  return $block;
+}
+
 
 /**
  * Theme the Post Block content types form
@@ -185,9 +217,7 @@ function theme_postblock_types($form) {
 /**
  * Generate the contents of the block
  */
-function postblock_generate_block($delta) {
-  $types = variable_get('postblock_types_' . $delta, array());
-  $method = variable_get('postblock_selection_' . $delta, 0);
+function _postblock_generate($types, $method, $verb) {
   $all_types = node_get_types('types');
   $list = array();
   $weights = array();
@@ -205,7 +235,7 @@ function postblock_generate_block($delta) {
     // Sort list in specified order
     array_multisort($weights, $list);
 
-    return theme('postblock', $list, $delta);
+    return theme('postblock', array('list' => $list, 'postblock_id' => $delta, 'verb' => $verb));
   }
 }
 

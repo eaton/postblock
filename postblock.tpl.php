@@ -6,6 +6,7 @@
  *
  * Available variables:
  * - $types: Raw data for each enabled content type.
+ * - $verb:  The word to use when constructing the link title. (Defaults to 'Create'.)
  * - $items: An array of formatted data for each enabled content type. Each one
  *   contains:
  *   - $item->type: The machine-readable name of the content type.
@@ -27,7 +28,7 @@
   <?php foreach ($items as $key => $item): ?>
     <li class="leaf<?php print $item->zebra ? ' odd' : ' even'; ?><?php print $item->first ? ' first' : ''; ?><?php print $item->last ? ' last' : ''; ?><?php print $item->active ? ' active' : ''; ?>">
       <a href="<?php print $item->url; ?>" title="<?php print $item->description; ?>" class="<?php print $item->active ? 'active' : ''; ?>">
-        <?php print t('Create !type', array('!type' => $item->name)); ?>
+        <?php print t('!verb !type', array('!verb' => $verb, '!type' => $item->name)); ?>
       </a>
     </li>
   <?php endforeach; ?>
