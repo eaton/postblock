@@ -42,7 +42,7 @@ function postblock_theme() {
  * Implementation of hook_menu().
  */
 function postblock_menu() {
-  $items['admin/settings/postblock'] = array(
+  $items['admin/settings/config/content/postblock'] = array(
     'title' => 'Post block',
     'description' => 'Configure Post Block',
     'page callback' => 'drupal_get_form',
@@ -95,13 +95,13 @@ function postblock_settings_validate($form, &$form_state) {
  * Implementation of hook_block().
  */
 function postblock_block_info() {
-  $node_types = node_get_types('names');
+  $node_types = node_type_get_types();
 
   // Create as many blocks as entered in the settings form
   for ($i = 1; $i <= variable_get('postblock_number', 1); $i++) {
   $blocks[$i] = array(
     'info' => variable_get('postblock_name_' . $i, 'Post Block ' . $i) . ' (Post Block)',
-    'cache' => BLOCK_CACHE_PER_ROLE,
+    'cache' => DRUPAL_CACHE_PER_ROLE,
   );
   }
   return $blocks;
@@ -113,16 +113,16 @@ function postblock_block_info() {
  */
 function postblock_block_configure($delta = 0) {
   $settings = array(
-    'name' => variable_get('postblock_name_' . $delta, 'Post Block ' . $delta);
-    'verb' => variable_get('postblock_verb_' . $delta, 'Create');
-    'method' => variable_get('postblock_selection_' . $delta, 0);
-    'types' => variable_get('postblock_types_' . $delta, array());
+    'name' => variable_get('postblock_name_' . $delta, 'Post Block ' . $delta),
+    'verb' => variable_get('postblock_verb_' . $delta, 'Create'),
+    'method' => variable_get('postblock_selection_' . $delta, 0),
+    'types' => variable_get('postblock_types_' . $delta, array()),
   );
   return _postblock_form($settings, $delta);
 }
 
 function _postblock_form($settings = array(), $delta = 0) {
-  $node_types = node_get_types('names');
+  $node_types = node_type_get_types();
 
   $form['postblock_name_' . $delta] = array(
     '#type' => 'textfield',
@@ -134,8 +134,7 @@ function _postblock_form($settings = array(), $delta = 0) {
   $form['postblock_verb_' . $delta] = array(
     '#type' => 'textfield',
     '#title' => t('Block verb'),
-    '#description' => t('A custom name for the block to help distinguish from other Post Block blocks.') . '<br />' . t('NOTE: This name is only used on the Blocks administration page (admin/build/block) and is never shown in the block itself.'),
-    '#default_value' => $settings['verb']],
+    '#default_value' => $settings['verb'],
   );
 
   $form['postblock_content_types'] = array(
@@ -156,15 +155,15 @@ function _postblock_form($settings = array(), $delta = 0) {
     '#theme' => 'postblock_types',
   );
   $default = $settings['types'];
-  foreach ($node_types as $id => $node_type) {
-    $form['postblock_content_types']['postblock_types_' . $delta][$id]['data'] = array(
+  foreach ($node_types as $type => $info) {
+    $form['postblock_content_types']['postblock_types_' . $delta][$type]['data'] = array(
       '#type' => 'checkbox',
-      '#title' => $node_type,
-      '#default_value' => $default[$id]['data'],
+      '#title' => $info->name,
+      '#default_value' => isset($default[$type]) ? $default[$type]['data'] : array(),
     );
-    $form['postblock_content_types']['postblock_types_' . $delta][$id]['weight'] = array(
+    $form['postblock_content_types']['postblock_types_' . $delta][$type]['weight'] = array(
       '#type' => 'weight',
-      '#default_value' => $default[$id]['weight'],
+      '#default_value' => isset($default[$type]) ? $default[$type]['weight'] : 0,
       '#attributes' => array('class' => 'weight'),
     );
   }
@@ -228,7 +227,7 @@ function theme_postblock_types($form) {
  * Generate the contents of the block
  */
 function _postblock_generate($types, $method, $verb) {
-  $all_types = node_get_types('types');
+  $all_types = node_type_get_types();
   $list = array();
   $weights = array();
 
