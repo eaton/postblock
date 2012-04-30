@@ -33,7 +33,7 @@ function postblock_theme() {
       'template' => 'postblock',
     ),
     'postblock_types' => array(
-      'variables' => array('form' => array()),
+      'render element' => 'form',
     ),
   );
 }
@@ -151,20 +151,21 @@ function _postblock_form($settings = array(), $delta = 0) {
     '#options' => array(t('Show'), t('Hide')),
   );
   $form['postblock_content_types']['postblock_types_' . $delta] = array(
+    '#theme' => array('postblock_types'),
     '#tree' => TRUE,
-    '#theme' => 'postblock_types',
   );
+
   $default = $settings['types'];
   foreach ($node_types as $type => $info) {
     $form['postblock_content_types']['postblock_types_' . $delta][$type]['data'] = array(
       '#type' => 'checkbox',
       '#title' => $info->name,
-      '#default_value' => isset($default[$type]) ? $default[$type]['data'] : array(),
+      '#default_value' => isset($default[$type]) ? $default[$type]['data'] : TRUE,
     );
     $form['postblock_content_types']['postblock_types_' . $delta][$type]['weight'] = array(
       '#type' => 'weight',
       '#default_value' => isset($default[$type]) ? $default[$type]['weight'] : 0,
-      '#attributes' => array('class' => 'weight'),
+      '#attributes' => array('class' => array('weight')),
     );
   }
   return $form;
@@ -173,7 +174,7 @@ function _postblock_form($settings = array(), $delta = 0) {
 /**
  * Implementation of hook_block_save().
  */
-function postblock_block_save($op = 'list', $delta = 0, $edit = array()) {
+function postblock_block_save($delta = 0, $edit = array()) {
   variable_set('postblock_name_' . $delta, $edit['postblock_name_' . $delta]);
   variable_set('postblock_verb_' . $delta, $edit['postblock_verb_' . $delta]);
   variable_set('postblock_selection_' . $delta, $edit['postblock_selection_' . $delta]);
@@ -185,12 +186,9 @@ function postblock_block_save($op = 'list', $delta = 0, $edit = array()) {
  * Implementation of hook_block_view().
  */
 function postblock_block_view($delta = 0) {
-  $types = variable_get('postblock_types_' . $delta, array());
-  $method = variable_get('postblock_selection_' . $delta, 0);
-  $verb = variable_get('postblock_verb_' . $delta, 'Create');
   $block = array(
     'subject' => t('Post Content'),
-    'content' => _postblock_generate($types, $method, $verb),
+    'content' => _postblock_generate($delta),
   );
   return $block;
 }
@@ -199,23 +197,22 @@ function postblock_block_view($delta = 0) {
 /**
  * Theme the Post Block content types form
  */
-function theme_postblock_types($form) {
+function theme_postblock_types($variables) {
+  $form = $variables['form'];
   $table_rows = array();
 
   // Add each table row to array
   foreach (element_children($form) as $id) {
     $this_row = array();
-
     $this_row[] = drupal_render($form[$id]['data']);
     $this_row[] = drupal_render($form[$id]['weight']);
-
-    $table_rows[] = array('data' => $this_row, 'class' => 'draggable');
+    $table_rows[] = array('data' => $this_row, 'class' => array('draggable'));
   }
 
   // Output table
   $header = array('Content Types', 'Order');
-  $output = theme('table', $header, $table_rows, array('id' => 'postblock-node-types'));
-  $output .= drupal_render($form);
+  $output = theme('table', array('header' => $header, 'rows' => $table_rows, 'attributes' => array('id' => 'postblock-node-types')));
+  $output .= drupal_render_children($form);
   $output .= '<div class="description">' . t("Content types selected here will be shown or hidden depending on the 'Selection method' above. The order of these content types represent the order the links will appear in the Post Block.") . '<br />' . t("NOTE: Content type links displayed in the Post Block will only be visible to users with the 'create [content type]' permission.") . '</div>';
 
   drupal_add_tabledrag('postblock-node-types', 'order', 'sibling', 'weight');
@@ -226,14 +223,18 @@ function theme_postblock_types($form) {
 /**
  * Generate the contents of the block
  */
-function _postblock_generate($types, $method, $verb) {
+function _postblock_generate($delta) {
   $all_types = node_type_get_types();
   $list = array();
   $weights = array();
 
+  $types = variable_get('postblock_types_' . $delta, array());
+  $method = variable_get('postblock_selection_' . $delta, 0);
+  $verb = variable_get('postblock_verb_' . $delta, 'Create');
+
   // Get the list of content types the current user has permission to create
   foreach ($types as $key => $type) {
-    if ($type['data'] != $method && node_access('create', $key)) {
+    if (($type['data'] != $method) && node_access('create', $key)) {
       $list[] = $all_types[$key];
       $weights[] = $type['weight'];
     }
@@ -254,9 +255,10 @@ function _postblock_generate($types, $method, $verb) {
 function template_preprocess_postblock(&$variables) {
   // Get ID of last item
   $last = count($variables['types']) - 1;
+  $items = array();
 
   // Setup variables
-  foreach ($variables['types'] as $key => $type) {
+  foreach ($variables['list'] as $key => $type) {
     $items[$key]->type = $type->type;
     $items[$key]->name = check_plain($type->name);
 
